@@ -1,8 +1,6 @@
 package bearmaps.proj2c.integerhoppuzzle;
 
-import bearmaps.proj2c.LazySolver;
-import bearmaps.proj2c.ShortestPathsSolver;
-import bearmaps.proj2c.SolutionPrinter;
+import bearmaps.proj2c.*;
 
 /**
  * Showcases how the AStarSolver can be used for solving integer hop puzzles.
@@ -16,7 +14,7 @@ public class DemoIntegerHopPuzzleSolution {
 
         IntegerHopGraph ahg = new IntegerHopGraph();
 
-        ShortestPathsSolver<Integer> solver = new LazySolver<>(ahg, start, goal, 10);
+        ShortestPathsSolver<Integer> solver = new AStarSolver<>(ahg, start, goal, 10);
         SolutionPrinter.summarizeSolution(solver, " => ");
 
     }
