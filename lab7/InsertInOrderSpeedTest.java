@@ -3,7 +3,7 @@ import java.util.TreeMap;
 import java.io.IOException;
 import java.util.Scanner;
 
-import edu.princeton.cs.algs4.Stopwatch;
+//import edu.princeton.cs.algs4.Stopwatch;
 
 /**
  * Performs a timing test on three different set implementations.
@@ -23,8 +23,8 @@ public class InsertInOrderSpeedTest {
         // borrow waitForPositiveInt(Scanner input) from InsertRandomSpeedTest
         InsertRandomSpeedTest i = new InsertRandomSpeedTest();
 
-        System.out.println("\nThis program inserts lexicographically "
-                + "increasing Strings into Maps as <String, Integer> pairs.");
+        System.out.println("\nThis program inserts lexicographically increasing Strings "
+                + "into Maps as <String, Integer> pairs.");
 
         String repeat = "y";
         do {
@@ -126,14 +126,13 @@ public class InsertInOrderSpeedTest {
         }
     }
 
-    /* ---------------------- Private methods ---------------------- */
+    /* ------------------------------- Private methods ------------------------------- */
 
     /**
      * To be called after catching a StackOverflowError
      * Prints the error with corresponding N and L
      */
     private static void printInfoOnStackOverflow(int N) {
-        System.out.println("--Stack Overflow -- couldn't add "
-                + N + " strings.");
+        System.out.println("--Stack Overflow -- couldn't add " + N + " strings.");
     }
 }

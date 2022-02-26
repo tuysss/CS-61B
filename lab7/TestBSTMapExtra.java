@@ -1,7 +1,9 @@
-import java.util.Set;
-import java.util.HashSet;
-import static org.junit.Assert.*;
 import org.junit.Test;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import static org.junit.Assert.*;
 
 /** Tests of optional parts of lab 8. */
 public class TestBSTMapExtra {
@@ -112,6 +114,6 @@ public class TestBSTMapExtra {
     }
 
     public static void main(String[] args) {
-        jh61b.junit.TestRunner.runTests(TestBSTMapExtra.class);
+        //jh61b.junit.TestRunner.runTests(TestBSTMapExtra.class);
     }
 }
