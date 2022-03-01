@@ -129,62 +129,30 @@ public class RasterAPIHandler extends APIRouteHandler<Map<String, Double>, Map<S
         }
         results.put("depth",depth);
 
-        int tile=(int) Math.pow(2,depth);
-
-        double tileWidth=(ROOT_ULLON-ROOT_LRLON)/tile;
-        double tileHeight=(ROOT_ULLAT-ROOT_LRLAT)/tile;
-
-        int iBegin,iEnd,jBegin,jEnd;
-
-        //upper left longitude of Bounding Boxes
-        double tile_ullon=ROOT_ULLON+tileWidth;
-        for(iBegin=0;iBegin<tile;iBegin++){
-            tile_ullon+=tileWidth;
-            if(tile_ullon>request_ullon){
-                raster_ul_lon=tile_ullon-tileWidth;
-                break;
-            }
-        }
+        int rasterULLonIndex= calcRasteredParamIndex(depth,request_ullon,ROOT_ULLON,ROOT_LRLON);
+        raster_ul_lon = calcRasteredCoord(depth, rasterULLonIndex, ROOT_ULLON, ROOT_LRLON, true ,true);
         results.put("raster_ul_lon",raster_ul_lon);
 
-        //upper left latitude of Bounding Boxes
-        double tile_ullat=ROOT_ULLAT+tileHeight;
-        for(jBegin=0;jBegin<tile;jBegin++){
-            tile_ullat+=tileHeight;
-            if(tile_ullat>request_ullat){
-                raster_ul_lat=tile_ullat-tileHeight;
-                break;
-            }
-        }
+        int rasterULLatIndex= calcRasteredParamIndex(depth,request_ullat,ROOT_ULLAT,ROOT_LRLAT);
+        raster_ul_lat = calcRasteredCoord(depth, rasterULLatIndex, ROOT_ULLAT, ROOT_LRLAT, true ,false);
         results.put("raster_ul_lat",raster_ul_lat);
 
-        //TODO: lower left longitude of Bounding Boxes
-        double tile_lrlon=raster_ul_lon;
-        for(iEnd=iBegin+1;iEnd<tile;iEnd++){
-            tile_lrlon+=tileWidth;
-            if(tile_lrlon>request_lrlon){
-                raster_lr_lon=tile_lrlon;
-                break;
-            }
-        }
+        int rasterLRLonIndex= calcRasteredParamIndex(depth,request_lrlon,ROOT_ULLON,ROOT_LRLON);
+        raster_lr_lon = calcRasteredCoord(depth, rasterLRLonIndex, ROOT_ULLON, ROOT_LRLON, false ,true);
         results.put("raster_lr_lon",raster_lr_lon);
 
-        //TODO: lower left latitude of Bounding Boxes
-        double tile_lrlat=raster_ul_lon;
-        for(jEnd=jBegin+1;jEnd<tile;jEnd++){
-            tile_lrlat+=tileHeight;
-            if(tile_lrlat>request_lrlat){
-                raster_lr_lat=tile_lrlat;
-                break;
-            }
-        }
+        int rasterLRLatIndex= calcRasteredParamIndex(depth,request_lrlat,ROOT_ULLAT,ROOT_LRLAT);
+        raster_lr_lat = calcRasteredCoord(depth, rasterLRLatIndex, ROOT_ULLAT, ROOT_LRLAT, false ,false);
         results.put("raster_lr_lat",raster_lr_lat);
 
-        //TODO: fill in String[][]
-        //[[d2_x0_y1.png, d2_x1_y1.png, d2_x2_y1.png, d2_x3_y1.png],
-        render_grid=new String[iEnd-iBegin+1][jEnd-jBegin+1];
-        for(int x=0;x<iEnd-iBegin+1;x++){
-            for(int y=0;y<jEnd-jBegin+1;y++){
+
+        int rowNum=rasterLRLonIndex-rasterULLonIndex+1;
+        int colNum=rasterLRLatIndex-rasterULLatIndex+1;
+
+        render_grid=new String[rowNum][colNum];
+
+        for(int x=rasterLRLatIndex;x<rowNum+rasterLRLatIndex;x++){
+            for(int y=rasterLRLonIndex;y<colNum+rasterLRLonIndex;y++){
                 render_grid[x][y]='d'+depth+"_x"+x+"_y"+y+".png";
             }
         }
@@ -193,18 +161,46 @@ public class RasterAPIHandler extends APIRouteHandler<Map<String, Double>, Map<S
         return results;
     }
 
-    private Map<Integer,Double> findUpperLeft(double initLoc,double tileUnit,int tileNum,int request_ul){
-        double  raster_ul=0;
-        int begin;
-        double tile_ul=initLoc+tileUnit;
-        for(begin=0;begin<tileNum;begin++){
-            tile_ul+=tileUnit;
-            if(tile_ul>request_ul){
-                raster_ul=tile_ul-tileUnit;
-                break;
+    private int calcRasteredParamIndex(int depth, double requestParam, double rootUL, double rootLR){
+        int tileNum= (int) Math.pow(2,depth);
+
+        double tileSize=Math.abs(rootUL-rootLR)/tileNum;
+
+        double tilePassedNum=(requestParam-rootUL)/tileSize;
+
+        int RasteredParamIndex= (int) Math.ceil(tilePassedNum)-1;  //向上取整，由于从0开始所以-1
+
+        int bound=tileNum-1;
+        if(RasteredParamIndex>bound){
+            RasteredParamIndex=bound;
+        }else if(requestParam<1){
+            RasteredParamIndex=1;
+        }
+
+        return RasteredParamIndex;
+    }
+
+    private double calcRasteredCoord(int depth, int rasteredParamIndex, double rootUL, double rootLR, boolean isUL, boolean isLon) {
+        int tileNum= (int) Math.pow(2,depth);
+
+        double tileSize=Math.abs(rootUL-rootLR)/tileNum;
+        double rasteredCoord;
+
+        if(isUL){
+            if(isLon){
+                rasteredCoord=rootUL+rasteredParamIndex*tileSize;//实际上是从第index+1块算作raster的区域，正好顶点在该区域前方-1，抵消
+            }else{
+                rasteredCoord=rootUL-rasteredParamIndex*tileSize;
+            }
+        } else{
+            if(isLon){
+                rasteredCoord=rootUL+(rasteredParamIndex+1)*tileSize;
+            }else{
+                rasteredCoord=rootUL-(rasteredParamIndex+1)*tileSize;
             }
         }
-        return new HashMap<>(begin, (float) raster_ul);
+
+        return rasteredCoord;
     }
 
 
