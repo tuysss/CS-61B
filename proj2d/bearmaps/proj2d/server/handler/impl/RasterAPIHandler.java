@@ -17,8 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static bearmaps.proj2d.utils.Constants.SEMANTIC_STREET_GRAPH;
-import static bearmaps.proj2d.utils.Constants.ROUTE_LIST;
+import static bearmaps.proj2d.utils.Constants.*;
 
 /**
  * Handles requests from the web browser for map images. These images
@@ -86,11 +85,146 @@ public class RasterAPIHandler extends APIRouteHandler<Map<String, Double>, Map<S
     public Map<String, Object> processRequest(Map<String, Double> requestParams, Response response) {
         //System.out.println("yo, wanna know the parameters given by the web browser? They are:");
         //System.out.println(requestParams);
+        //System.out.println("Since you haven't implemented RasterAPIHandler.processRequest, nothing is displayed in "
+        //       + "your browser.");
+        double request_lrlon=requestParams.get("lrlon");
+        double request_ullon=requestParams.get("ullon");
+        double request_pixels_in_width=requestParams.get("w");
+        double request_pixels_in_height=requestParams.get("h");
+        double request_ullat=requestParams.get("ullat");
+        double request_lrlat=requestParams.get("lrlat");
+
+        String[][] render_grid;     //max:128*128
+        double raster_ul_lon=0;
+        double raster_ul_lat=0;
+        double raster_lr_lon=0;
+        double raster_lr_lat=0;
+        int depth;
+        boolean query_success=true;
         Map<String, Object> results = new HashMap<>();
-        System.out.println("Since you haven't implemented RasterAPIHandler.processRequest, nothing is displayed in "
-                + "your browser.");
+
+        // Request grid is completely out of the whole image.
+        if(Double.compare(request_lrlon,ROOT_ULLON)<0
+            ||Double.compare(request_ullon,ROOT_LRLON)>0
+            ||Double.compare(request_lrlat,ROOT_ULLAT)>0
+            ||Double.compare(request_ullat,ROOT_LRLAT)<0){
+            query_success=false;
+        }
+
+        // Nonsense request grid.
+        if (Double.compare(request_ullon, request_lrlon) > 0
+                || Double.compare(request_ullat, request_ullat) < 0) {
+            query_success = false;
+        }
+        results.put("query_success",query_success);
+
+        double query_LonDPP=(request_lrlon-request_ullon)/request_pixels_in_width;
+
+        LonDPPList LonDPPs=new LonDPPList();
+        for(depth=0;depth<=7;depth++){
+            //this<required, i.e. this has better resolution than query box asks.
+            if (Double.compare(LonDPPs.getLonDPP(depth),query_LonDPP)<0){
+                break;
+            }
+        }
+        results.put("depth",depth);
+
+        int tile=(int) Math.pow(2,depth);
+
+        double tileWidth=(ROOT_ULLON-ROOT_LRLON)/tile;
+        double tileHeight=(ROOT_ULLAT-ROOT_LRLAT)/tile;
+
+        int iBegin,iEnd,jBegin,jEnd;
+
+        //upper left longitude of Bounding Boxes
+        double tile_ullon=ROOT_ULLON+tileWidth;
+        for(iBegin=0;iBegin<tile;iBegin++){
+            tile_ullon+=tileWidth;
+            if(tile_ullon>request_ullon){
+                raster_ul_lon=tile_ullon-tileWidth;
+                break;
+            }
+        }
+        results.put("raster_ul_lon",raster_ul_lon);
+
+        //upper left latitude of Bounding Boxes
+        double tile_ullat=ROOT_ULLAT+tileHeight;
+        for(jBegin=0;jBegin<tile;jBegin++){
+            tile_ullat+=tileHeight;
+            if(tile_ullat>request_ullat){
+                raster_ul_lat=tile_ullat-tileHeight;
+                break;
+            }
+        }
+        results.put("raster_ul_lat",raster_ul_lat);
+
+        //TODO: lower left longitude of Bounding Boxes
+        double tile_lrlon=raster_ul_lon;
+        for(iEnd=iBegin+1;iEnd<tile;iEnd++){
+            tile_lrlon+=tileWidth;
+            if(tile_lrlon>request_lrlon){
+                raster_lr_lon=tile_lrlon;
+                break;
+            }
+        }
+        results.put("raster_lr_lon",raster_lr_lon);
+
+        //TODO: lower left latitude of Bounding Boxes
+        double tile_lrlat=raster_ul_lon;
+        for(jEnd=jBegin+1;jEnd<tile;jEnd++){
+            tile_lrlat+=tileHeight;
+            if(tile_lrlat>request_lrlat){
+                raster_lr_lat=tile_lrlat;
+                break;
+            }
+        }
+        results.put("raster_lr_lat",raster_lr_lat);
+
+        //TODO: fill in String[][]
+        //[[d2_x0_y1.png, d2_x1_y1.png, d2_x2_y1.png, d2_x3_y1.png],
+        render_grid=new String[iEnd-iBegin+1][jEnd-jBegin+1];
+        for(int x=0;x<iEnd-iBegin+1;x++){
+            for(int y=0;y<jEnd-jBegin+1;y++){
+                render_grid[x][y]='d'+depth+"_x"+x+"_y"+y+".png";
+            }
+        }
+        results.put("render_grid",render_grid);
+
         return results;
     }
+
+    private Map<Integer,Double> findUpperLeft(double initLoc,double tileUnit,int tileNum,int request_ul){
+        double  raster_ul=0;
+        int begin;
+        double tile_ul=initLoc+tileUnit;
+        for(begin=0;begin<tileNum;begin++){
+            tile_ul+=tileUnit;
+            if(tile_ul>request_ul){
+                raster_ul=tile_ul-tileUnit;
+                break;
+            }
+        }
+        return new HashMap<>(begin, (float) raster_ul);
+    }
+
+
+    private class LonDPPList{
+        Map<Integer,Double> LonDPPs=new HashMap<>();
+
+        public LonDPPList(){
+            double LonDPPof0=(ROOT_LRLON - ROOT_ULLON)/TILE_SIZE; //0.000343322754
+            LonDPPs.put(0,LonDPPof0);
+            for(int i=1;i<7;i++){
+                LonDPPs.put(i,LonDPPof0/(Math.pow(2,i)));
+            }
+        }
+
+        public double getLonDPP(int i) {
+            return LonDPPs.get(i);
+        }
+    }
+
+
 
     @Override
     protected Object buildJsonResponse(Map<String, Object> result) {
