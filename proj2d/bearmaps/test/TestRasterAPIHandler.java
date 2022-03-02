@@ -1,8 +1,8 @@
 package bearmaps.test;
 
+import bearmaps.proj2d.server.handler.impl.RasterAPIHandler;
 import org.junit.Before;
 import org.junit.Test;
-import bearmaps.proj2d.server.handler.impl.RasterAPIHandler;
 
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -28,11 +28,13 @@ public class TestRasterAPIHandler {
     private static final String RESULTS_FILE = "../library-fa20/data/proj2d_test_inputs/raster_results.txt";
     private static final int NUM_TESTS = 8;
     private static RasterAPIHandler rasterer;
+    //private static Raster rasterer;
 
 
     @Before
     public void setUp() throws Exception {
         rasterer = new RasterAPIHandler();
+        //rasterer = new Raster();
     }
 
     @Test
