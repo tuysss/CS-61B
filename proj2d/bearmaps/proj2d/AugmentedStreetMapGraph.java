@@ -1,25 +1,48 @@
 package bearmaps.proj2d;
 
+import bearmaps.proj2ab.Point;
 import bearmaps.proj2c.streetmap.StreetMapGraph;
 import bearmaps.proj2c.streetmap.Node;
+import bearmaps.proj2ab.KDTree;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedList;
 
 /**
- * An augmented graph that is more powerful that a standard StreetMapGraph.
+ * An augmented graph that is more powerful than a standard StreetMapGraph.
  * Specifically, it supports the following additional operations:
  *
  *
  * @author Alan Yao, Josh Hug, ________
  */
 public class AugmentedStreetMapGraph extends StreetMapGraph {
+    private Map<Point,Long> pointToID;
+    private KDTree kdTree ;
+
 
     public AugmentedStreetMapGraph(String dbPath) {
         super(dbPath);
         // You might find it helpful to uncomment the line below:
-        // List<Node> nodes = this.getNodes();
+        //List<Node> nodes = this.getNodes();
+        pointToID=new HashMap<>();
+        List<Point> points=new LinkedList<>();
+        List<Node> nodes=this.getNodes();
+
+        for(Node node:nodes){
+            long id=node.id();
+            if(!this.neighbors(id).isEmpty()){
+                double x=node.lon();
+                double y=node.lat();
+                Point point=new Point(x,y);
+
+                points.add(point);
+                pointToID.put(point,id);
+            }
+        }
+        kdTree=new KDTree(points);
+
     }
 
 
@@ -31,14 +54,15 @@ public class AugmentedStreetMapGraph extends StreetMapGraph {
      * @return The id of the node in the graph closest to the target.
      */
     public long closest(double lon, double lat) {
-        return 0;
+        Point closest= kdTree.nearest(lon,lat);
+        return pointToID.get(closest);
     }
 
 
     /**
      * For Project Part III (gold points)
      * In linear time, collect all the names of OSM locations that prefix-match the query string.
-     * @param prefix Prefix string to be searched for. Could be any case, with our without
+     * @param prefix Prefix string to be searched for. Could be any case, with or without
      *               punctuation.
      * @return A <code>List</code> of the full names of locations whose cleaned name matches the
      * cleaned <code>prefix</code>.
