@@ -37,7 +37,7 @@ public class MyTrieSet implements TrieSet61B{
         TrieNode currNode=root;
         TrieNode nextNode=null;
         for(int i=0;i<key.length();i++){
-            int c=key.charAt(i);
+            char c=key.charAt(i);
             nextNode=currNode.children.get(c);
             if(nextNode==null){
                 return false;
