@@ -1,7 +1,11 @@
 package bearmaps.proj2d;
 
 import bearmaps.proj2c.AStarSolver;
+import bearmaps.proj2c.WeightedEdge;
+import org.apache.commons.math3.geometry.spherical.twod.Vertex;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -41,11 +45,98 @@ public class Router {
      * @return A list of NavigatiionDirection objects corresponding to the input
      * route.
      */
-    public static List<NavigationDirection> routeDirections(AugmentedStreetMapGraph g,
-                                                            List<Long> route) {
-        /* fill in for part IV */
-        return null;
+    public static List<NavigationDirection> routeDirections(AugmentedStreetMapGraph g, List<Long> route) {
+        //TODO: fill in for part IV
+        List<NavigationDirection> results=new LinkedList<>();
+        List<WeightedEdge<Long>> ways=getWays(g,route);
+        double prevDirWeight=0;
+        int prevDirToChange=NavigationDirection.START;
+        int currDirToChange;
+
+        //special case (if only one way): easy! no directions to change
+        if(ways.size()==1){
+            NavigationDirection nd=new NavigationDirection(prevDirToChange,ways.get(0).getName(),ways.get(0).weight());
+            results.add(nd);
+        }
+        //normal case:
+        for(int i=1;i<ways.size();i++){
+            WeightedEdge<Long> preWay= ways.get(i-1);
+            WeightedEdge<Long> currWay=ways.get(i);
+
+            long preVertex=preWay.from();
+            long currVertex=preWay.to();
+            long nextVertex=currWay.to();
+
+            double[] prevPos=getPos(g,preVertex);
+            double[] currPos=getPos(g,currVertex);
+            double[] nextPos=getPos(g,nextVertex);
+
+            String prevWayName=preWay.getName()==null? NavigationDirection.UNKNOWN_ROAD :preWay.getName();
+            String currWayName=currWay.getName()==null? NavigationDirection.UNKNOWN_ROAD :currWay.getName();
+
+            prevDirWeight+=preWay.weight();
+
+            //avoid the case : node changes, but at the exactly same way!
+            if(!currWay.getName().equals(preWay.getName())){
+                double prevBearing=NavigationDirection.bearing(prevPos[0],currPos[0],prevPos[1],prevPos[1]);
+                double currBearing=NavigationDirection.bearing(currPos[0],nextPos[0],currPos[1],nextPos[1]);
+
+                currDirToChange=NavigationDirection.getDirection(prevBearing,currBearing);
+
+                NavigationDirection nd=new NavigationDirection(prevDirToChange,prevWayName,prevDirWeight);
+
+                prevDirToChange=currDirToChange;
+
+                results.add(nd);
+            }
+            //when reach the last way, there's no nextway for currway.
+            if(i==ways.size()-1){
+                prevDirWeight+=currWay.weight();
+                NavigationDirection nd=new NavigationDirection(prevDirToChange,currWayName,prevDirWeight);
+                results.add(nd);
+            }
+        }
+
+        return results;
     }
+
+    /**
+     * helper class of routeDirections
+     * @param g The graph to use.
+     * @param vertex The the vertex on the given route
+     * @return A list which have the vertex's longitude at 0 and its latitude at 1
+     */
+    private static double[] getPos(AugmentedStreetMapGraph g, long vertex){
+        double[] pos=new double[2];
+        pos[0]=g.lon(vertex);
+        pos[1]=g.lat(vertex);
+        return pos;
+    }
+
+    /**
+     * helper class of routeDirections
+     * @param g
+     * @param route
+     * @return A list of WeightedEdge that connected every two adjacent vertices in route
+     * */
+    private static List<WeightedEdge<Long>> getWays(AugmentedStreetMapGraph g,List<Long> route){
+        List<WeightedEdge<Long>> ways=new LinkedList<>();
+        long currVertex;
+        long nextVertex;
+        for(int i=1;i<route.size();i++){
+            currVertex=route.get(i-1);
+            nextVertex=route.get(i);
+            for(WeightedEdge<Long> edge:g.neighbors(currVertex)){
+                if(edge.to().equals(nextVertex)){
+                    ways.add(edge);
+                }
+            }
+        }
+        return ways;
+    }
+
+
+
 
     /**
      * Class to represent a navigation direction, which consists of 3 attributes:
@@ -99,6 +190,12 @@ public class Router {
             this.direction = STRAIGHT;
             this.way = UNKNOWN_ROAD;
             this.distance = 0.0;
+        }
+
+        public NavigationDirection(int direction,String way,double distance){
+            this.direction=direction;
+            this.way=way;
+            this.distance=distance;
         }
 
         public String toString() {
